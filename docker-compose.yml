@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: bloggin-platform-app
+    ports:
+      - "8080:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - mongo
+    env_file:
+      - .env
+    networks:
+      - gin-network
+
+  mongo:
+    image: mongo:6
+    container_name: bloggin-platform-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - gin-network
+
+volumes:
+  mongo-data:
+
+networks:
+  gin-network:
+    driver: bridge
