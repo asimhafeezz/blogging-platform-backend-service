@@ -4,6 +4,7 @@ import (
 	"blogging-platform/backend-service/config"
 	"blogging-platform/backend-service/model"
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,13 +12,21 @@ import (
 )
 
 func CreateUser(ctx *gin.Context) {
-	newUserData := ctx.Request.Body
+	var newUserData model.User
+	if err := ctx.ShouldBindJSON(&newUserData); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": true,
+			"message": "Invalid JSON!",
+		})
+		return
+	}
 	result, err := config.GetCollection("user").InsertOne(ctx, newUserData)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
+		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
@@ -56,6 +65,31 @@ func GetUserById(ctx *gin.Context) {
 		"success": false,
 		"message": "user created successfully!",
 		"data":    result,
+	})
+}
+
+func DeleteUserById(ctx *gin.Context) {
+	userId := ctx.Params.ByName("id")
+	if userId == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "ID can not be empty!",
+		})
+		return
+	}
+
+	_, err := config.GetCollection("user").DeleteOne(ctx, bson.M{"_id": userId})
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("user with ID: %v, deleted successfully!", userId),
 	})
 }
 

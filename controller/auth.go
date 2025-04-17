@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"blogging-platform/backend-service/common/helpers"
+	"blogging-platform/backend-service/common/packages"
 	"blogging-platform/backend-service/config"
 	"blogging-platform/backend-service/model"
 	"net/http"
@@ -12,37 +14,47 @@ import (
 func RegisterUser(c *gin.Context) {
 	var data model.User
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Invalid JSON",
-		})
+		helpers.CustomErrorResponse(c, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
 
 	userByEmail, _ := getUserByEmail(c.Request.Context(), data.Email)
-
 	if userByEmail != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "user already exists",
-		})
+		helpers.CustomErrorResponse(c, http.StatusBadRequest, "user already exists")
 		return
 	}
+
+	// generate password hash
+	hashedPassword, err := helpers.GeneratePasswordHash(data.Password)
+	if err != nil {
+		helpers.CustomErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// assign hashpassword
+	data.Password = hashedPassword
 
 	updatedUser, err := config.GetCollection("user").InsertOne(c, data)
 	data.Id = updatedUser.InsertedID.(primitive.ObjectID)
 	if err != nil {
-		println(err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
+		helpers.CustomErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// generate token
+	token, err := packages.GenerateJWT(data)
+	if err != nil {
+		helpers.CustomErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "user registered successfully!",
-		"data":    data,
+		"data": gin.H{
+			"user":        data,
+			"accessToken": token,
+		},
 	})
 }
 

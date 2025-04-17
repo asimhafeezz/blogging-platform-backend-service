@@ -4,6 +4,7 @@ import (
 	"blogging-platform/backend-service/config"
 	"blogging-platform/backend-service/routes"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,6 +17,8 @@ func main() {
 
 	// router
 	router := gin.Default()
+
+	router.Use(cors.Default())
 
 	// register all the routes
 	routes.RegisterRoutes(router)
